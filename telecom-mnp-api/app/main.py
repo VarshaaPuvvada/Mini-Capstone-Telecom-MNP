@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from app.controllers.auth_controller import router as auth_router
 from fastapi.security import HTTPBearer
 from app.controllers import port_controller,operator_controller,admin_controller,otp_controller
@@ -15,6 +16,22 @@ from app.exceptions.custom_exceptions import (
 )
 
 app = FastAPI(title="Telecom MNP API")
+
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 
 # Register exception handlers
 app.add_exception_handler(NotFoundException, not_found_exception_handler)
