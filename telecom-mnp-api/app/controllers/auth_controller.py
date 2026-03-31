@@ -1,6 +1,6 @@
 from fastapi import APIRouter,Depends,Header
 from app.schemas.auth_schema import UserCreate, UserLogin
-from app.services.auth_service import register_user, login_user
+from app.services.auth_service import register_user, login_user, get_current_user_profile
 from app.core.dependencies import get_current_user,get_current_customer,get_current_agent,get_current_admin
 
 router = APIRouter()
@@ -15,7 +15,7 @@ async def login(data: UserLogin):
 
 @router.get("/me")
 async def get_me(user=Depends(get_current_user)):
-    return user
+    return await get_current_user_profile(user)
 
 # @router.get("/me")
 # async def get_me(authorization: str = Header()):
@@ -23,14 +23,17 @@ async def get_me(user=Depends(get_current_user)):
 
 @router.get("/customer-dashboard")
 async def customer_dashboard(user=Depends(get_current_customer)):
-    return {"message": "Welcome Customer", "user": user}
+    safe_user = await get_current_user_profile(user)
+    return {"message": "Welcome Customer", "user": safe_user}
 
 
 @router.get("/agent-dashboard")
 async def agent_dashboard(user=Depends(get_current_agent)):
-    return {"message": "Welcome Agent", "user": user}
+    safe_user = await get_current_user_profile(user)
+    return {"message": "Welcome Agent", "user": safe_user}
 
 
 @router.get("/admin-dashboard")
 async def admin_dashboard(user=Depends(get_current_admin)):
-    return {"message": "Welcome Admin", "user": user}
+    safe_user = await get_current_user_profile(user)
+    return {"message": "Welcome Admin", "user": safe_user}

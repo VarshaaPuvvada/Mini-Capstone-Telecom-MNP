@@ -1,5 +1,5 @@
 # app/services/user_service.py
-from app.repositories.user_repository import create_user, get_user_by_mobile
+from app.repositories.user_repository import create_user, get_user_by_mobile, get_user_by_id
 from app.core.security import hash_password, verify_password, create_access_token
 from app.models.user_model import user_helper
 from app.schemas.auth_schema import UserCreate, UserLogin
@@ -38,3 +38,10 @@ async def login_user(data: UserLogin):
         "access_token": access_token,
         "token_type": "bearer"
     }
+
+async def get_current_user_profile(user_payload: dict):
+    user = await get_user_by_id(user_payload["user_id"])
+    if not user:
+        raise NotFoundException("User not found")
+
+    return user_helper(user)
