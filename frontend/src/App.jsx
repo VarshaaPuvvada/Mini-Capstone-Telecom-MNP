@@ -1,5 +1,13 @@
-import { useState } from "react";
 import "./App.css";
+import {
+  NavLink,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import RequestPort from "./pages/RequestPort";
@@ -8,16 +16,70 @@ import AgentDashboard from "./pages/AgentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import { useAuth } from "./context/AuthContext";
 
-function Header({ currentView, onNavigate }) {
+function LoadingScreen() {
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        padding: "32px",
+      }}
+    >
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1px solid #d7dce5",
+          borderRadius: "20px",
+          padding: "28px 32px",
+          boxShadow: "0 18px 40px rgba(15, 23, 42, 0.08)",
+        }}
+      >
+        Loading your telecom portal...
+      </div>
+    </main>
+  );
+}
+
+function AppFrame({ children }) {
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(180deg, #f0fdfa 0%, #f8fafc 30%, #ffffff 100%)",
+        padding: "32px 20px 48px",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "1120px",
+          margin: "0 auto",
+        }}
+      >
+        {children}
+      </div>
+    </main>
+  );
+}
+
+function Header() {
   const { user, signOut } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const customerNav = [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "request-port", label: "Request Port" },
-    { id: "my-requests", label: "My Requests" },
+    { to: "/dashboard", label: "Dashboard" },
+    { to: "/request-port", label: "Request Port" },
+    { to: "/my-requests", label: "My Requests" },
   ];
 
   const navItems = user?.role === "customer" ? customerNav : [];
+
+  function handleLogout() {
+    signOut();
+    navigate("/login", { replace: true });
+  }
 
   return (
     <header
@@ -54,25 +116,30 @@ function Header({ currentView, onNavigate }) {
         </h1>
       </div>
 
-      <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onNavigate(item.id)}
-            style={{
-              border: currentView === item.id ? "none" : "1px solid #cbd5e1",
-              borderRadius: "999px",
-              padding: "10px 14px",
-              background: currentView === item.id ? "#0f766e" : "#ffffff",
-              color: currentView === item.id ? "#ffffff" : "#0f172a",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
+      <div
+        style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}
+      >
+        {navItems.map((item) => {
+          const active = location.pathname === item.to;
+
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              style={{
+                border: active ? "none" : "1px solid #cbd5e1",
+                borderRadius: "999px",
+                padding: "10px 14px",
+                background: active ? "#0f766e" : "#ffffff",
+                color: active ? "#ffffff" : "#0f172a",
+                fontWeight: 700,
+                textDecoration: "none",
+              }}
+            >
+              {item.label}
+            </NavLink>
+          );
+        })}
 
         <div
           style={{
@@ -88,7 +155,7 @@ function Header({ currentView, onNavigate }) {
 
         <button
           type="button"
-          onClick={signOut}
+          onClick={handleLogout}
           style={{
             border: "none",
             borderRadius: "999px",
@@ -106,90 +173,90 @@ function Header({ currentView, onNavigate }) {
   );
 }
 
-function AuthenticatedApp() {
-  const { user } = useAuth();
-  const [currentView, setCurrentView] = useState("dashboard");
-
-  function renderPage() {
-    if (user?.role === "agent") {
-      return <AgentDashboard />;
-    }
-
-    if (user?.role === "admin") {
-      return <AdminDashboard />;
-    }
-
-    switch (currentView) {
-      case "request-port":
-        return <RequestPort onCreated={() => setCurrentView("my-requests")} />;
-      case "my-requests":
-        return <MyRequests />;
-      default:
-        return <Dashboard onNavigate={setCurrentView} />;
-    }
-  }
-
-  return (
-    <>
-      <Header currentView={currentView} onNavigate={setCurrentView} />
-      {renderPage()}
-    </>
-  );
-}
-
-function LoadingScreen() {
-  return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        padding: "32px",
-      }}
-    >
-      <div
-        style={{
-          background: "#ffffff",
-          border: "1px solid #d7dce5",
-          borderRadius: "20px",
-          padding: "28px 32px",
-          boxShadow: "0 18px 40px rgba(15, 23, 42, 0.08)",
-        }}
-      >
-        Loading your telecom portal...
-      </div>
-    </main>
-  );
-}
-
-function AppShell() {
-  const { isAuthenticated, isLoading } = useAuth();
+function ProtectedLayout({ allowedRoles }) {
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return <LoadingScreen />;
   }
 
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!allowedRoles.includes(user?.role)) {
+    if (user?.role === "agent") {
+      return <Navigate to="/agent" replace />;
+    }
+
+    if (user?.role === "admin") {
+      return <Navigate to="/admin" replace />;
+    }
+
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(180deg, #f0fdfa 0%, #f8fafc 30%, #ffffff 100%)",
-        padding: "32px 20px 48px",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "1120px",
-          margin: "0 auto",
-        }}
-      >
-        {isAuthenticated ? <AuthenticatedApp /> : <Login />}
-      </div>
-    </main>
+    <AppFrame>
+      <Header />
+      <Outlet />
+    </AppFrame>
   );
 }
 
+function LoginRoute() {
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (isAuthenticated) {
+    if (user?.role === "agent") {
+      return <Navigate to="/agent" replace />;
+    }
+
+    if (user?.role === "admin") {
+      return <Navigate to="/admin" replace />;
+    }
+
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return (
+    <AppFrame>
+      <Login />
+    </AppFrame>
+  );
+}
+
+function RequestPortRoute() {
+  const navigate = useNavigate();
+
+  return <RequestPort onCreated={() => navigate("/my-requests")} />;
+}
+
 export default function App() {
-  return <AppShell />;
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginRoute />} />
+
+      <Route element={<ProtectedLayout allowedRoles={["customer"]} />}>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/request-port" element={<RequestPortRoute />} />
+        <Route path="/my-requests" element={<MyRequests />} />
+      </Route>
+
+      <Route element={<ProtectedLayout allowedRoles={["agent"]} />}>
+        <Route path="/agent" element={<AgentDashboard />} />
+      </Route>
+
+      <Route element={<ProtectedLayout allowedRoles={["admin"]} />}>
+        <Route path="/admin" element={<AdminDashboard />} />
+      </Route>
+
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
+  );
 }
